@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RandomPrompter</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1 class="title">Random Prompter</h1>
+      <p class="subtitle">Convert &lt;Filename&gt; in input to random element of array from txt</p>
+    </header>
+
+    <section class="controls">
+      <div class="left-controls">
+        <button id="pickDirBtn" class="btn">Select Folder</button>
+        <label class="file-label">
+          or upload folder
+          <input id="folderInput" type="file" webkitdirectory directory multiple style="display:block;margin-top:6px" />
+        </label>
+        <div class="note">Template uses &lt;<span class="example">Filename</span>&gt; (without .txt)</div>
+      </div>
+
+      <div class="right-controls">
+        <button id="refreshBtn" class="btn">Refresh</button>
+        <button id="generateBtn" class="btn primary">Generate</button>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="left-pane">
+        <h3>Template
+          <select id="templateSelect" class="template-select">
+            <option value="">— load template.txt —</option>
+          </select>
+        </h3>
+        <textarea id="templateInput" class="template" placeholder="예: Today: &lt;foods&gt; + &lt;sides&gt;"></textarea>
+        <h3>Result<button id="copyResultBtn" class="btn small">Copy</button></h3></h3>
+        <div id="result" class="result"></div>
+      </div>
+
+      <div class="right-pane">
+        <div class="file-tools">
+          <h3>Text files</h3>
+          <div id="fileList" class="file-list">폴더를 선택하거나 업로드하세요.</div>
+          <div class="file-actions">
+            <button id="saveFileBtn" class="btn">Save</button>
+            <button id="downloadFileBtn" class="btn">Download Edited</button>
+          </div>
+        </div>
+
+        <div class="editor">
+          <h3>Editor</h3>
+          <div id="editorMeta" class="editor-meta">선택된 파일: <span id="currentFileName">-</span></div>
+          <textarea id="fileEditor" class="file-editor" placeholder="Select a file to edit its contents"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <small>Version 1.0 — File System Access API recommended (Chrome/Edge). If unsupported, use folder upload.</small>
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
