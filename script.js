@@ -1,4 +1,3 @@
-// script.js (전체 복사해서 붙여넣기)
 const pickDirBtn = document.getElementById('pickDirBtn');
 const folderInput = document.getElementById('folderInput');
 const generateBtn = document.getElementById('generateBtn');
@@ -20,16 +19,19 @@ let currentFileKey = null; // selected file key
 // Utility: parse lines into {value, weight, raw}
 function parseLinesToItems(lines) {
   const DEFAULT_WEIGHT = 100;
-  return lines.map(line => {
-    const s = String(line || '').trim();
-    const m = s.match(/^(\d+)\s*:(.*)$/);
-    if (m) {
-      const w = parseInt(m[1], 10);
-      return { value: (m[2] || '').trim(), weight: isNaN(w) ? DEFAULT_WEIGHT : w, raw: s };
-    } else {
-      return { value: s, weight: DEFAULT_WEIGHT, raw: s };
-    }
-  }).filter(it => it.value.length > 0);
+  return lines
+    .map(line => String(line || '').trim())
+    .filter(s => s.length > 0 && !s.startsWith('//'))
+    .map(s => {
+      const m = s.match(/^(\d+)\s*:(.*)$/);
+      if (m) {
+        const w = parseInt(m[1], 10);
+        return { value: (m[2] || '').trim(), weight: isNaN(w) ? DEFAULT_WEIGHT : w, raw: s };
+      } else {
+        return { value: s, weight: DEFAULT_WEIGHT, raw: s };
+      }
+    })
+    .filter(it => it.value.length > 0);
 }
 
 // FileSystem Access API path: ask user to pick a directory
@@ -128,7 +130,7 @@ saveFileBtn.addEventListener('click', async () => {
       const writable = await handle.createWritable();
       await writable.write(text);
       await writable.close();
-      const lines = text.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
+      const lines = text.split(/\r?\n/).map(s => s.replace(/\/\/.*$/, '').trim()).filter(s => s.length > 0);
       dataMap[currentFileKey] = parseLinesToItems(lines).map(it => ({...it, handle}));
       resultEl.textContent = `Saved ${currentFileKey}`;
     } catch (err) {
@@ -278,7 +280,7 @@ async function loadFilesFromFileList(fileList) {
     if (!f.name.toLowerCase().endsWith('.txt')) continue;
     try {
       const text = await f.text();
-      const lines = text.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
+      const lines = text.split(/\r?\n/).map(s => s.replace(/\/\/.*$/, '').trim()).filter(s => s.length > 0);
       const key = f.name.replace(/\.[^/.]+$/, '');
       dataMap[key] = parseLinesToItems(lines);
     } catch (err) {
@@ -296,7 +298,7 @@ async function loadAllTxtFromDirectoryHandle(dirHandle) {
       try {
         const file = await handle.getFile();
         const text = await file.text();
-        const lines = text.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
+        const lines = text.split(/\r?\n/).map(s => s.replace(/\/\/.*$/, '').trim()).filter(s => s.length > 0);
         const key = name.replace(/\.[^/.]+$/, '');
         const items = parseLinesToItems(lines).map(it => ({...it, handle}));
         dataMap[key] = items;
