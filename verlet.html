@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Verlet 시뮬레이터</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --danger: #ef4444;
+      --shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      --radius: 10px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+      background: linear-gradient(180deg, #fbfdff, #f3f6fb);
+      color: #0f172a;
+    }
+
+    .sidebar {
+      width: 360px;
+      padding: 20px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      border-right: 1px solid #eef2f7;
+      overflow: auto;
+    }
+
+    .canvas-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 18px 22px;
+      border-bottom: 1px solid #eef2f7;
+      background: transparent;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input[type="number"],
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #e6eef8;
+      background: #fff;
+      margin-top: 6px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row>* {
+      flex: 1;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 0;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #e6eef8;
+      color: var(--accent);
+    }
+
+    .small {
+      font-size: 13px;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .stat {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    canvas {
+      flex: 1;
+      display: block;
+      background: linear-gradient(180deg, #ffffff, #f3f6fb);
+      cursor: crosshair;
+    }
+
+    .footer {
+      padding: 10px 14px;
+      border-top: 1px solid #eef2f7;
+      background: transparent;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .preset {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .preset input {
+      width: 80px;
+    }
+
+    .pin {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f97316;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .vertex {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2563eb;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .pinned {
+      background: #ef4444;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #475569;
+      margin-top: 6px;
+    }
+
+    .top-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toggle {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #e6eef8;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .range {
+      width: 100%;
+    }
+
+    .small-muted {
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <header>
+        <h1>Verlet 시뮬레이터</h1>
+        <div class="small-muted">프리셋과 커스텀으로 강체/체인/원 생성 · 드래그로 상호작용</div>
+      </header>
+
+      <label>프리셋 선택</label>
+      <div class="preset">
+        <select id="presetType">
+          <option value="line">Chain</option>
+          <option value="rect">Rectangle</option>
+          <option value="circle">Circle</option>
+          <option value="clothes">Clothes</option>
+        </select>
+        <button id="createPreset" class="small">Create</button>
+      </div>
+
+      <div id="presetParams">
+        <!-- dynamic params -->
+      </div>
+
+      <hr style="margin-top:12px;border:none;border-top:1px solid #eef2f7;">
+      <label>커스텀 에디터</label>
+      <div id="customEditorWrap">
+        <div style="display:flex;gap:8px;">
+          <button id="openCustomEditor" class="small secondary">Open Custom Editor</button>
+          <button id="createFromEditor" class="small">Create From Editor</button>
+        </div>
+        <div id="customEditor"
+          style="display:none;margin-top:8px;padding:8px;border-radius:8px;border:1px solid #eef2f7;background:#fff;">
+          <div style="display:flex;gap:8px;">
+            <div style="flex:1">
+              <label>Points (index, x, y, pinned)</label>
+              <div id="pointList"
+                style="max-height:160px;overflow:auto;border:1px solid #eef2f7;padding:6px;border-radius:6px;background:#fbfdff;">
+              </div>
+              <div style="display:flex;gap:6px;margin-top:6px;">
+                <input id="ptX" type="number" placeholder="x" style="width:70px">
+                <input id="ptY" type="number" placeholder="y" style="width:70px">
+                <label style="display:flex;align-items:center;gap:6px;"><input id="ptPinned"
+                    type="checkbox">Pinned</label>
+                <button id="addPoint" class="small">Add Point</button>
+              </div>
+            </div>
+            <div style="flex:1">
+              <label>Connections (a, b, rest)</label>
+              <div id="connList"
+                style="max-height:160px;overflow:auto;border:1px solid #eef2f7;padding:6px;border-radius:6px;background:#fbfdff;">
+              </div>
+              <div style="display:flex;gap:6px;margin-top:6px;">
+                <input id="connA" type="number" placeholder="a" style="width:50px">
+                <input id="connB" type="number" placeholder="b" style="width:50px">
+                <input id="connRest" type="number" placeholder="rest" style="width:70px">
+                <button id="addConn" class="small">Add Conn</button>
+              </div>
+            </div>
+          </div>
+          <div class="hint" style="margin-top:8px">리스트에서 항목을 클릭하면 편집/삭제 가능합니다. 인덱스는 0부터 시작합니다.</div>
+        </div>
+      </div>
+
+      <hr style="margin-top:12px;border:none;border-top:1px solid #eef2f7;">
+
+      <label>물리 설정</label>
+      <label>Gravity: <span id="gravVal">980</span></label>
+      <input id="gravity" class="range" type="range" min="0" max="2000" value="980">
+      <label>Wind: <span id="windVal">0</span></label>
+      <input id="wind" class="range" type="range" min="-1000" max="1000" value="0">
+      <label>Air Drag:</label>
+      <input id="airDrag" class="range" type="range" min="0" max="500" value="10">
+      <div class="small-muted">Drag coeff: <span id="airDragVal">0.02</span></div>
+
+      <label>Constraint Iterations: <span id="iterVal">4</span></label>
+      <input id="iterations" class="range" type="range" min="1" max="12" value="4">
+
+      <div class="controls">
+        <button id="pauseBtn" class="small secondary">Pause</button>
+        <button id="clearBtn" class="small">Clear</button>
+      </div>
+
+      <hr style="margin-top:12px;border:none;border-top:1px solid #eef2f7;">
+
+      <label>상태</label>
+      <div class="stat">Objects: <span id="objCount">0</span></div>
+      <div class="stat">Vertices: <span id="vertCount">0</span></div>
+
+      <div style="height:20px"></div>
+      <div class="footer">라이트 테마 · 드래그로 상호작용 · 정점 클릭으로 핀 토글</div>
+    </aside>
+
+    <div class="canvas-wrap">
+      <div class="top-controls" style="padding:0px 0px;">
+        <div style="flex:1"></div>
+      </div>
+      <canvas id="c"></canvas>
+    </div>
+  </div>
+
+  <script>
+    /* -----------------------------
+       Verlet Physics Engine (간단 구현)
+       ----------------------------- */
+    const canvas = document.getElementById('c');
+    const sidebarEl = document.querySelector('.sidebar');
+    const ctx = canvas.getContext('2d');
+    let W_sidebar = sidebarEl.offsetWidth;
+    let W = canvas.width = window.innerWidth - W_sidebar;
+    let H = canvas.height = window.innerHeight;
+    window.addEventListener('resize', () => { W = canvas.width = window.innerWidth - W_sidebar; H = canvas.height = window.innerHeight; });
+
+    /* 데이터 구조
+      - shapes: 배열. 각 shape는 {id, type, verts: [{x,y,px,py, pinned}], constraints: [{a,b,rest}], color}
+    */
+    let shapes = [];
+    let nextShapeId = 1;
+
+    /* 물리 파라미터 */
+    let gravity = 980; // px/s^2
+    let wind = 0;
+    let iterations = 4;
+    let paused = false;
+    let airDrag = 0.02;
+
+    /* 시간 */
+    let lastTime = performance.now();
+
+    let mouse = { x: 0, y: 0, down: false, dragging: false, dragVertex: null, dragShape: null, offsetX: 0, offsetY: 0, dragPinnedGroup: null };
+
+    canvas.addEventListener('mousedown', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+      mouse.down = true;
+      const hit = findNearestVertex(mouse.x, mouse.y, 12);
+      if (hit) {
+        mouse.dragging = true;
+        mouse.dragVertex = hit.v;
+        mouse.dragShape = hit.shape;
+        mouse.offsetX = hit.v.x - mouse.x;
+        mouse.offsetY = hit.v.y - mouse.y;
+        // 만약 드래그 대상이 pinned이면, 같은 shape 내에서 pinned인 정점들만 그룹으로 모음
+        if (hit.v.pinned) {
+          mouse.dragPinnedGroup = hit.shape.verts.filter(vv => vv.pinned);
+        } else {
+          mouse.dragPinnedGroup = null;
+        }
+        // 선택 상태 갱신(선택 강조용)
+        lastSelected = { shape: hit.shape, vertexIndex: hit.shape.verts.indexOf(hit.v) };
+      } else {
+        mouse.dragging = false;
+        mouse.dragVertex = null;
+        mouse.dragShape = null;
+        mouse.dragPinnedGroup = null;
+        lastSelected = null;
+      }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mouseup', e => {
+      mouse.down = false;
+      mouse.dragging = false;
+      mouse.dragVertex = null;
+      mouse.dragShape = null;
+      mouse.dragPinnedGroup = null;
+    });
+
+    // canvas.addEventListener('click', e => {
+    //   const rect = canvas.getBoundingClientRect();
+    //   const mx = e.clientX - rect.left;
+    //   const my = e.clientY - rect.top;
+    //   const hit = findNearestVertex(mx, my, 10);
+
+    //   if (!hit) {
+    //     lastSelected = null;
+    //     return;
+    //   }
+
+    //   const clickedShape = hit.shape;
+    //   const clickedIdx = clickedShape.verts.indexOf(hit.v);
+
+    //   lastSelected = { shape: clickedShape, vertexIndex: clickedIdx };
+    // });
+
+    // Shift 키로 결합 모드 토글 (keydown에서만 토글되도록)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift') {
+        mergeMode = !mergeMode;
+        // UI 표시 업데이트 함수가 있으면 호출 (예: updateModeIndicator())
+        if (typeof updateModeIndicator === 'function') updateModeIndicator(mergeMode);
+      }
+    });
+
+    // 클릭 핸들러: mergeMode일 때 두 점 선택으로 연결 생성
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const hit = findNearestVertex(mx, my, 12); // 반드시 {shape, v} 반환
+
+      if (!hit) {
+        // 빈 공간 클릭: 선택 초기화(merge 모드 유지)
+        if (!mergeMode) lastSelected = null;
+        return;
+      }
+
+      const shape = hit.shape;
+      const idx = shape.verts.indexOf(hit.v);
+      if (idx === -1) return;
+
+      // 결합 모드가 아닐 때는 기존 선택 동작
+      if (!mergeMode) {
+        lastSelected = { shape, vertexIndex: idx };
+        return;
+      }
+
+      // 결합 모드: 첫 클릭이면 저장, 두 번째 클릭이면 연결 시도
+      if (!mergeFirst) {
+        mergeFirst = { shape, idx };
+        // 시각적 표시(예: 하이라이트) 필요하면 호출
+        if (typeof highlightVertex === 'function') highlightVertex(shape, idx);
+        return;
+      }
+
+      // mergeFirst가 이미 있으면 두 점 연결 시도
+      const a = mergeFirst.shape;
+      const ai = mergeFirst.idx;
+      const b = shape;
+      const bi = idx;
+
+      // 같은 점이면 취소(첫 선택 유지)
+      if (a === b && ai === bi) {
+        // 선택 유지, 아무 동작 안 함
+        return;
+      }
+
+      // 연결 추가
+      const ok = addConnectionBetween(a, ai, b, bi);
+      // 연결 성공/실패에 따라 시각적 피드백
+      if (ok) {
+        if (typeof flashConnection === 'function') flashConnection(a, ai, b, bi);
+      } else {
+        if (typeof showMessage === 'function') showMessage('이미 연결되어 있거나 연결할 수 없습니다.');
+      }
+
+      // 두 번째 선택 후에도 merge 모드는 유지하되 첫 선택은 초기화(다음 연결을 위해)
+      mergeFirst = null;
+      // 하이라이트 제거
+      if (typeof clearHighlight === 'function') clearHighlight();
+    });
+
+
+
+    /* 유틸: 가장 가까운 정점 찾기 */
+    function findNearestVertex(x, y, maxDist = 12) {
+      let best = null;
+      let bestD = maxDist;
+      for (const shape of shapes) {
+        for (const v of shape.verts) {
+          const dx = v.x - x, dy = v.y - y;
+          const d = Math.hypot(dx, dy);
+          if (d < bestD) {
+            bestD = d;
+            best = { shape, v };
+          }
+        }
+      }
+      return best;
+    }
+
+    /* Verlet 통합 */
+    function integrate(dt) {
+      const dt2 = dt * dt;
+      const dragFactor = Math.exp(-airDrag * dt); // 안정적인 감쇠
+      for (const shape of shapes) {
+        for (const v of shape.verts) {
+          if (v.pinned) continue;
+          // 현재 속도(Verlet)
+          const vx = v.x - v.px;
+          const vy = v.y - v.py;
+          // 공기저항 적용 (속도 감쇠)
+          const dvx = vx * dragFactor;
+          const dvy = vy * dragFactor;
+          // 가속도
+          const ax = wind;
+          const ay = gravity;
+          // Verlet 업데이트: x_new = x + v_damped + a * dt^2
+          const nx = v.x + dvx + ax * dt2;
+          const ny = v.y + dvy + ay * dt2;
+          // 이전 위치 갱신
+          v.px = v.x;
+          v.py = v.y;
+          v.x = nx;
+          v.y = ny;
+        }
+      }
+    }
+
+    /* 제약(거리) 해결 */
+    function satisfyConstraints() {
+      for (let k = 0; k < iterations; k++) {
+        for (const shape of shapes) {
+          for (const c of shape.constraints) {
+            const a = shape.verts[c.a];
+            const b = shape.verts[c.b];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy) || 1e-6;
+            const diff = (dist - c.rest) / dist;
+            // stiffness 1.0 (rigid)
+            const invMassA = a.pinned ? 0 : 1;
+            const invMassB = b.pinned ? 0 : 1;
+            const sum = invMassA + invMassB;
+            if (sum === 0) continue;
+            const moveA = invMassA / sum;
+            const moveB = invMassB / sum;
+            const offsetX = dx * diff;
+            const offsetY = dy * diff;
+            if (!a.pinned) {
+              a.x += offsetX * moveA;
+              a.y += offsetY * moveA;
+            }
+            if (!b.pinned) {
+              b.x -= offsetX * moveB;
+              b.y -= offsetY * moveB;
+            }
+          }
+          // optional: keep shape inside canvas bounds
+          for (const v of shape.verts) {
+            if (v.x < 0) { v.x = 0; }
+            if (v.x > W) { v.x = W; }
+            if (v.y < 0) { v.y = 0; }
+            if (v.y > H) { v.y = H; }
+          }
+        }
+      }
+
+      // interShapeConstraints 처리 (satisfyConstraints 내부 끝부분에 추가)
+      for (const c of interShapeConstraints) {
+        const sA = c.shapeA;
+        const sB = c.shapeB;
+        if (!sA || !sB) continue;
+        const a = sA.verts[c.idxA];
+        const b = sB.verts[c.idxB];
+        if (!a || !b) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.hypot(dx, dy) || 1e-6;
+        const diff = (dist - c.rest) / dist;
+        const invA = a.pinned ? 0 : 1;
+        const invB = b.pinned ? 0 : 1;
+        const sum = invA + invB;
+        if (sum === 0) continue;
+        const moveA = invA / sum;
+        const moveB = invB / sum;
+        const offsetX = dx * diff;
+        const offsetY = dy * diff;
+        if (!a.pinned) { a.x += offsetX * moveA; a.y += offsetY * moveA; }
+        if (!b.pinned) { b.x -= offsetX * moveB; b.y -= offsetY * moveB; }
+      }
+
+    }
+
+
+
+    // 전역: 결합 모드 플래그와 선택 상태
+    let mergeMode = false;            // Shift로 토글되는 결합 모드
+    let mergeFirst = null;            // 첫 번째 선택 { shape, idx } 또는 null
+
+    // 전역: 도형 간 연결 저장소 (각 항목: {shapeA, idxA, shapeB, idxB, rest})
+    const interShapeConstraints = [];
+
+
+    function addConnectionBetween(shapeA, idxA, shapeB, idxB) {
+      if (!shapeA || !shapeB) return false;
+      if (typeof idxA !== 'number' || typeof idxB !== 'number') return false;
+      if (!shapeA.verts[idxA] || !shapeB.verts[idxB]) return false;
+      if (shapeA === shapeB && idxA === idxB) return false;
+
+      // 같은 도형 내부 연결
+      if (shapeA === shapeB) {
+        const exists = shapeA.constraints.some(c =>
+          (c.a === idxA && c.b === idxB) || (c.a === idxB && c.b === idxA)
+        );
+        if (exists) return false;
+        const va = shapeA.verts[idxA];
+        const vb = shapeA.verts[idxB];
+        const rest = Math.hypot(va.x - vb.x, va.y - vb.y);
+        shapeA.constraints.push({ a: idxA, b: idxB, rest });
+        updateStats();
+        return true;
+      }
+
+      // 다른 도형 간 연결: interShapeConstraints에 추가 (객체 동일성 기준)
+      const dup = interShapeConstraints.some(c =>
+        (c.shapeA === shapeA && c.idxA === idxA && c.shapeB === shapeB && c.idxB === idxB) ||
+        (c.shapeA === shapeB && c.idxA === idxB && c.shapeB === shapeA && c.idxB === idxA)
+      );
+      if (dup) return false;
+      const va = shapeA.verts[idxA];
+      const vb = shapeB.verts[idxB];
+      const rest = Math.hypot(va.x - vb.x, va.y - vb.y);
+      interShapeConstraints.push({ shapeA, idxA, shapeB, idxB, rest });
+      updateStats();
+      return true;
+    }
+
+
+
+
+
+
+
+
+
+
+    /* 렌더링 */
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+      // draw constraints
+      for (const shape of shapes) {
+        ctx.strokeStyle = shape.color || '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (const c of shape.constraints) {
+          const a = shape.verts[c.a];
+          const b = shape.verts[c.b];
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+        }
+        ctx.stroke();
+
+        // draw vertices
+        for (const v of shape.verts) {
+          ctx.beginPath();
+          ctx.fillStyle = v.pinned ? '#ef4444' : '#2563eb';
+          ctx.arc(v.x, v.y, v.pinned ? 5 : 4, 0, Math.PI * 2);
+          ctx.fill();
+          // small outline
+          ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      // render() 내부 예시: inter-shape 연결 그리기
+      ctx.strokeStyle = 'rgba(0,200,150,0.9)';
+      for (const c of interShapeConstraints) {
+        const a = c.shapeA.verts[c.idxA];
+        const b = c.shapeB.verts[c.idxB];
+        if (!a || !b) continue;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      // mergeMode 표시 (좌측 상단)
+      if (mergeMode) {
+        ctx.fillStyle = 'rgba(255,80,80,0.9)';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('결합 모드: ON (Shift로 토글)', 10, 20);
+      }
+
+    }
+
+    const _origRender = render;
+    render = function () {
+      _origRender();
+      if (lastSelected) {
+        const s = lastSelected.shape;
+        const idx = lastSelected.vertexIndex;
+        if (s && s.verts[idx]) {
+          const v = s.verts[idx];
+          ctx.beginPath();
+          ctx.strokeStyle = '#111827';
+          ctx.lineWidth = 2;
+          ctx.arc(v.x, v.y, 10, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    };
+
+    /* 메인 루프 */
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.033); // clamp dt
+      lastTime = now;
+      if (!paused) {
+        integrate(dt);
+        satisfyConstraints();
+      }
+
+      if (mouse.down && mouse.dragging && mouse.dragVertex) {
+        const v = mouse.dragVertex;
+        const targetX = mouse.x + mouse.offsetX;
+        const targetY = mouse.y + mouse.offsetY;
+        const dx = targetX - v.x;
+        const dy = targetY - v.y;
+
+        if (v.pinned && Array.isArray(mouse.dragPinnedGroup) && mouse.dragPinnedGroup.length > 0) {
+          // pinned 그룹만 동일 이동 (나머지 정점은 그대로)
+          for (const pv of mouse.dragPinnedGroup) {
+            pv.x += dx;
+            pv.y += dy;
+            pv.px += dx;
+            pv.py += dy;
+          }
+        } else {
+          // 단일 비고정 정점 이동: 현재 위치와 이전 위치를 동일하게 설정하여 속도 급변 방지
+          v.x = targetX;
+          v.y = targetY;
+          v.px = targetX;
+          v.py = targetY;
+        }
+      }
+
+      render();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    /* -----------------------------
+       Shape 생성 유틸리티
+       ----------------------------- */
+    // 교체: createLine 함수 (첫 번째 정점을 고정(pinned)으로 생성)
+    function createLine(x, y, count = 8, spacing = 20, horizontal = true) {
+      const shape = { id: nextShapeId++, type: 'line', verts: [], constraints: [], color: '#60a5fa' };
+      for (let i = 0; i < count; i++) {
+        const vx = x + (horizontal ? i * spacing : 0);
+        const vy = y + (horizontal ? 0 : i * spacing);
+        // 첫 번째 정점(i===0)은 pinned:true로 생성
+        shape.verts.push({ x: vx, y: vy, px: vx, py: vy, pinned: i === 0 });
+        if (i > 0) {
+          shape.constraints.push({ a: i - 1, b: i, rest: spacing });
+        }
+      }
+      shapes.push(shape);
+      updateStats();
+      return shape;
+    }
+
+
+    function createRect(cx, cy, w, h) {
+      const shape = { id: nextShapeId++, type: 'rect', verts: [], constraints: [], color: '#34d399' };
+      // 4 corners clockwise
+      const hw = w / 2, hh = h / 2;
+      const pts = [
+        { x: cx - hw, y: cy - hh },
+        { x: cx + hw, y: cy - hh },
+        { x: cx + hw, y: cy + hh },
+        { x: cx - hw, y: cy + hh },
+      ];
+      for (const p of pts) {
+        shape.verts.push({ x: p.x, y: p.y, px: p.x, py: p.y, pinned: false });
+      }
+      // edges
+      shape.constraints.push({ a: 0, b: 1, rest: w });
+      shape.constraints.push({ a: 1, b: 2, rest: h });
+      shape.constraints.push({ a: 2, b: 3, rest: w });
+      shape.constraints.push({ a: 3, b: 0, rest: h });
+      // diagonals to keep rigid
+      const diag = Math.hypot(w, h);
+      shape.constraints.push({ a: 0, b: 2, rest: diag });
+      shape.constraints.push({ a: 1, b: 3, rest: diag });
+      shapes.push(shape);
+      updateStats();
+      return shape;
+    }
+
+    function createCircle(cx, cy, radius = 60, segments = 12) {
+      // 최소 세그먼트 보장
+      segments = Math.max(6, Math.floor(segments));
+
+      const shape = { id: nextShapeId++, type: 'circle', verts: [], constraints: [], color: '#f472b6' };
+
+      // 중앙 정점 (index 0)
+      shape.verts.push({ x: cx, y: cy, px: cx, py: cy, pinned: false });
+
+      // 외곽 정점들 (indices 1..segments)
+      for (let i = 0; i < segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const vx = cx + Math.cos(angle) * radius;
+        const vy = cy + Math.sin(angle) * radius;
+        shape.verts.push({ x: vx, y: vy, px: vx, py: vy, pinned: false });
+      }
+
+      // 외곽 인접 간선 (링)
+      for (let i = 0; i < segments; i++) {
+        const a = 1 + i;
+        const b = 1 + ((i + 1) % segments);
+        const dx = shape.verts[a].x - shape.verts[b].x;
+        const dy = shape.verts[a].y - shape.verts[b].y;
+        const rest = Math.hypot(dx, dy);
+        shape.constraints.push({ a, b, rest });
+      }
+
+      // 중심-외곽 스포크 연결 (강체 유지에 중요)
+      for (let i = 0; i < segments; i++) {
+        const a = 0;
+        const b = 1 + i;
+        const dx = shape.verts[a].x - shape.verts[b].x;
+        const dy = shape.verts[a].y - shape.verts[b].y;
+        const rest = Math.hypot(dx, dy);
+        shape.constraints.push({ a, b, rest });
+      }
+
+      // 외곽 간 추가 코드(chords) — 건너뛰기 연결을 여러 단계로 추가하여 강성 증가
+      // skipStep 값들을 늘리면 더 촘촘하게 연결됨 (예: 2,3)
+      const skipSteps = [2, 3];
+      for (const skip of skipSteps) {
+        for (let i = 0; i < segments; i++) {
+          const a = 1 + i;
+          const b = 1 + ((i + skip) % segments);
+          if (a === b) continue;
+          const dx = shape.verts[a].x - shape.verts[b].x;
+          const dy = shape.verts[a].y - shape.verts[b].y;
+          const rest = Math.hypot(dx, dy);
+          shape.constraints.push({ a, b, rest });
+        }
+      }
+
+      // 삼각화/크로스 연결: 각 외곽 정점과 그 다음 두 정점을 연결해 삼각형을 형성
+      for (let i = 0; i < segments; i++) {
+        const a = 1 + i;
+        const b = 1 + ((i + 2) % segments);
+        if (a === b) continue;
+        const dx = shape.verts[a].x - shape.verts[b].x;
+        const dy = shape.verts[a].y - shape.verts[b].y;
+        const rest = Math.hypot(dx, dy);
+        shape.constraints.push({ a, b, rest });
+      }
+
+      shapes.push(shape);
+      updateStats();
+      return shape;
+    }
+
+    function createCloth(cx, cy, rows = 12, cols = 12, spacing = 14, pinTop = true) {
+      rows = Math.max(2, Math.floor(rows));
+      cols = Math.max(2, Math.floor(cols));
+      spacing = Math.max(2, Number(spacing) || 14);
+      const shape = { id: nextShapeId++, type: 'clothes', verts: [], constraints: [], color: '#f59e0b' };
+
+      // verts: row-major, index = r * cols + c
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const vx = cx + (c - (cols - 1) / 2) * spacing;
+          const vy = cy + (r - (rows - 1) / 2) * spacing;
+          const pinned = (pinTop && r === 0);
+          shape.verts.push({ x: vx, y: vy, px: vx, py: vy, pinned: !!pinned });
+        }
+      }
+
+      // structural: horizontal & vertical neighbors only (no diagonal shear)
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const i = r * cols + c;
+          // right neighbor
+          if (c < cols - 1) {
+            const j = i + 1;
+            const dx = shape.verts[i].x - shape.verts[j].x;
+            const dy = shape.verts[i].y - shape.verts[j].y;
+            shape.constraints.push({ a: i, b: j, rest: Math.hypot(dx, dy) });
+          }
+          // bottom neighbor
+          if (r < rows - 1) {
+            const j = i + cols;
+            const dx = shape.verts[i].x - shape.verts[j].x;
+            const dy = shape.verts[i].y - shape.verts[j].y;
+            shape.constraints.push({ a: i, b: j, rest: Math.hypot(dx, dy) });
+          }
+        }
+      }
+
+      shapes.push(shape);
+      updateStats();
+      return shape;
+    }
+
+
+
+    /* 통계 업데이트 */
+    function updateStats() {
+      let vcount = 0;
+      for (const s of shapes) vcount += s.verts.length;
+      document.getElementById('objCount').textContent = shapes.length;
+      document.getElementById('vertCount').textContent = vcount;
+    }
+
+    /* 3) 커스텀 에디터 기능 추가: 포인트/연결 목록 관리 및 생성 */
+    let customEditorVisible = false;
+    let editorPoints = []; // {x,y,pinned}
+    let editorConns = [];  // {a,b,rest}
+    let lastSelected = null;
+
+    const openCustomEditorBtn = document.getElementById('openCustomEditor');
+    const customEditor = document.getElementById('customEditor');
+    const addPointBtn = document.getElementById('addPoint');
+    const addConnBtn = document.getElementById('addConn');
+    const pointListDiv = document.getElementById('pointList');
+    const connListDiv = document.getElementById('connList');
+    const createFromEditorBtn = document.getElementById('createFromEditor');
+
+    openCustomEditorBtn.addEventListener('click', () => {
+      customEditorVisible = !customEditorVisible;
+      customEditor.style.display = customEditorVisible ? 'block' : 'none';
+      openCustomEditorBtn.textContent = customEditorVisible ? 'Close Editor' : 'Open Custom Editor';
+      if (customEditorVisible) {
+        W_sidebar = 720;
+        sidebarEl.style.width = '720px';
+      } else {
+        W_sidebar = 360;
+        sidebarEl.style.width = '360px';
+      }
+      canvas.width = window.innerWidth - W_sidebar;
+      renderEditorLists();
+    });
+
+    function renderEditorLists() {
+      pointListDiv.innerHTML = '';
+      editorPoints.forEach((p, i) => {
+        const el = document.createElement('div');
+        el.style.display = 'flex';
+        el.style.justifyContent = 'space-between';
+        el.style.padding = '6px';
+        el.style.borderBottom = '1px dashed #eef2f7';
+        el.style.cursor = 'pointer';
+        el.innerHTML = `<div>#${i} x:${Math.round(p.x)} y:${Math.round(p.y)} ${p.pinned ? '<strong>PIN</strong>' : ''}</div>
+                    <div style="display:flex;gap:6px">
+                      <button data-i="${i}" class="editPt small secondary">Edit</button>
+                      <button data-i="${i}" class="delPt small">Del</button>
+                    </div>`;
+        pointListDiv.appendChild(el);
+      });
+      connListDiv.innerHTML = '';
+      editorConns.forEach((c, i) => {
+        const el = document.createElement('div');
+        el.style.display = 'flex';
+        el.style.justifyContent = 'space-between';
+        el.style.padding = '6px';
+        el.style.borderBottom = '1px dashed #eef2f7';
+        el.innerHTML = `<div>#${i} a:${c.a} b:${c.b} rest:${Math.round(c.rest)}</div>
+                    <div style="display:flex;gap:6px">
+                      <button data-i="${i}" class="editConn small secondary">Edit</button>
+                      <button data-i="${i}" class="delConn small">Del</button>
+                    </div>`;
+        connListDiv.appendChild(el);
+      });
+
+      // attach handlers
+      pointListDiv.querySelectorAll('.delPt').forEach(btn => {
+        btn.onclick = () => { const i = +btn.dataset.i; editorPoints.splice(i, 1); renderEditorLists(); };
+      });
+      pointListDiv.querySelectorAll('.editPt').forEach(btn => {
+        btn.onclick = () => {
+          const i = +btn.dataset.i; const p = editorPoints[i];
+          const nx = prompt('x', p.x); const ny = prompt('y', p.y); const np = confirm('Pinned? OK=Yes Cancel=No');
+          if (nx !== null && ny !== null) { editorPoints[i] = { x: parseFloat(nx), y: parseFloat(ny), pinned: np }; renderEditorLists(); }
+        };
+      });
+      connListDiv.querySelectorAll('.delConn').forEach(btn => {
+        btn.onclick = () => { const i = +btn.dataset.i; editorConns.splice(i, 1); renderEditorLists(); };
+      });
+      connListDiv.querySelectorAll('.editConn').forEach(btn => {
+        btn.onclick = () => {
+          const i = +btn.dataset.i; const c = editorConns[i];
+          const na = prompt('a index', c.a); const nb = prompt('b index', c.b); const nr = prompt('rest', c.rest);
+          if (na !== null && nb !== null && nr !== null) { editorConns[i] = { a: parseInt(na), b: parseInt(nb), rest: parseFloat(nr) }; renderEditorLists(); }
+        };
+      });
+    }
+
+    addPointBtn.addEventListener('click', () => {
+      const x = parseFloat(document.getElementById('ptX').value) || W / 2;
+      const y = parseFloat(document.getElementById('ptY').value) || H / 2;
+      const pinned = document.getElementById('ptPinned').checked;
+      editorPoints.push({ x, y, pinned });
+      document.getElementById('ptX').value = ''; document.getElementById('ptY').value = ''; document.getElementById('ptPinned').checked = false;
+      renderEditorLists();
+    });
+
+    addConnBtn.addEventListener('click', () => {
+      const a = parseInt(document.getElementById('connA').value);
+      const b = parseInt(document.getElementById('connB').value);
+      const rest = parseFloat(document.getElementById('connRest').value);
+      if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(rest)) {
+        editorConns.push({ a, b, rest });
+        document.getElementById('connA').value = ''; document.getElementById('connB').value = ''; document.getElementById('connRest').value = '';
+        renderEditorLists();
+      } else {
+        alert('유효한 a,b,rest 값을 입력하세요.');
+      }
+    });
+
+    createFromEditorBtn.addEventListener('click', () => {
+      if (editorPoints.length === 0) { alert('포인트를 하나 이상 추가하세요.'); return; }
+      const shape = { id: nextShapeId++, type: 'custom', verts: [], constraints: [], color: '#7c3aed' };
+      // push verts
+      for (const p of editorPoints) {
+        shape.verts.push({ x: p.x, y: p.y, px: p.x, py: p.y, pinned: !!p.pinned });
+      }
+      // push connections (validate indices)
+      for (const c of editorConns) {
+        if (c.a >= 0 && c.a < shape.verts.length && c.b >= 0 && c.b < shape.verts.length) {
+          shape.constraints.push({ a: c.a, b: c.b, rest: c.rest });
+        }
+      }
+      shapes.push(shape);
+      updateStats();
+      // clear editor if desired
+      // editorPoints = []; editorConns = []; renderEditorLists();
+    });
+
+    const airDragInput = document.getElementById('airDrag'); // 존재하면 바인딩
+    const airDragVal = document.getElementById('airDragVal'); // 값 표시 span
+    if (airDragInput) {
+      airDragInput.addEventListener('input', () => {
+        // 슬라이더 값은 0 ~ 100 같은 스케일일 수 있으니 적절히 매핑
+        // 예: slider.value in [0,100] -> airDrag in [0,0.2]
+        const s = parseFloat(airDragInput.value);
+        airDrag = s / 500; // 예 매핑: 0..100 -> 0..0.2
+        if (airDragVal) airDragVal.textContent = airDrag.toFixed(3);
+      });
+    }
+
+    /* -----------------------------
+       UI 바인딩
+       ----------------------------- */
+    const presetType = document.getElementById('presetType');
+    const presetParams = document.getElementById('presetParams');
+    const createPresetBtn = document.getElementById('createPreset');
+    const centerGridBtn = document.getElementById('centerGrid');
+    const gridRows = document.getElementById('gridRows');
+    const gridCols = document.getElementById('gridCols');
+    const gridSpacing = document.getElementById('gridSpacing');
+    const gravityInput = document.getElementById('gravity');
+    const gravVal = document.getElementById('gravVal');
+    const windInput = document.getElementById('wind');
+    const windVal = document.getElementById('windVal');
+    const iterInput = document.getElementById('iterations');
+    const iterVal = document.getElementById('iterVal');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    function renderPresetParams() {
+      const t = presetType.value;
+      presetParams.innerHTML = '';
+      if (t === 'line') {
+        presetParams.innerHTML = `
+      <label>Count</label><input id="lineCount" type="number" min="2" value="10">
+      <label>Spacing (px)</label><input id="lineSpacing" type="number" min="2" value="20">
+      <label>Orientation</label>
+      <select id="lineOrient"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select>
+    `;
+      } else if (t === 'rect') {
+        presetParams.innerHTML = `
+      <label>Width (px)</label><input id="rectW" type="number" min="4" value="160">
+      <label>Height (px)</label><input id="rectH" type="number" min="4" value="100">
+    `;
+      } else if (t === 'circle') {
+        presetParams.innerHTML = `
+      <label>Radius (px)</label><input id="circleR" type="number" min="4" value="80">
+      <label>Segments</label><input id="circleSeg" type="number" min="6" value="12">
+    `;
+      } else if (t === 'clothes') {
+        presetParams.innerHTML = `
+      <label>Rows</label><input id="clothRows" type="number" min="2" value="12">
+      <label>Cols</label><input id="clothCols" type="number" min="2" value="12">
+      <label>Spacing (px)</label><input id="clothSpacing" type="number" min="2" value="14">
+      <label>Pin Top Row</label>
+      <select id="clothPinTop"><option value="true">Yes</option><option value="false">No</option></select>
+    `;
+      }
+    }
+    presetType.addEventListener('change', renderPresetParams);
+    renderPresetParams();
+
+    createPresetBtn.addEventListener('click', () => {
+      const t = presetType.value;
+      const cx = W / 2, cy = H / 2;
+      if (t === 'line') {
+        const count = parseInt(document.getElementById('lineCount').value) || 8;
+        const spacing = parseFloat(document.getElementById('lineSpacing').value) || 20;
+        const orient = document.getElementById('lineOrient').value;
+        createLine(cx - (orient === 'horizontal' ? (count - 1) * spacing / 2 : 0), cy - (orient === 'vertical' ? (count - 1) * spacing / 2 : 0), count, spacing, orient === 'horizontal');
+      } else if (t === 'rect') {
+        const w = parseFloat(document.getElementById('rectW').value) || 160;
+        const h = parseFloat(document.getElementById('rectH').value) || 100;
+        createRect(cx, cy, w, h);
+      } else if (t === 'circle') {
+        const r = parseFloat(document.getElementById('circleR').value) || 80;
+        const seg = parseInt(document.getElementById('circleSeg').value) || 24;
+        createCircle(cx, cy, r, seg);
+      } else if (t === 'clothes') {
+        const rows = parseInt(document.getElementById('clothRows').value) || 12;
+        const cols = parseInt(document.getElementById('clothCols').value) || 12;
+        const spacing = parseFloat(document.getElementById('clothSpacing').value) || 14;
+        const pinTop = document.getElementById('clothPinTop').value === 'true';
+        createCloth(cx, cy, rows, cols, spacing, pinTop);
+      }
+
+      updateStats();
+    });
+
+    gravityInput.addEventListener('input', () => {
+      gravity = parseFloat(gravityInput.value);
+      gravVal.textContent = gravity;
+    });
+    windInput.addEventListener('input', () => {
+      wind = parseFloat(windInput.value);
+      windVal.textContent = wind;
+    });
+    iterInput.addEventListener('input', () => {
+      iterations = parseInt(iterInput.value);
+      iterVal.textContent = iterations;
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      paused = !paused;
+      pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+      pauseBtn.classList.toggle('secondary', paused);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      shapes = [];
+      interShapeConstraints.length = 0;
+      updateStats();
+    });
+
+    /* 키보드 단축: Delete 마지막 오브젝트 제거 */
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Delete') {
+        shapes.pop();
+        updateStats();
+      }
+
+      // P 키로 선택된 정점의 pinned 토글
+      if (e.key === 'p' || e.key === 'P') {
+        if (!lastSelected) return;
+        const s = lastSelected.shape;
+        const idx = lastSelected.vertexIndex;
+        if (!s || typeof idx !== 'number' || !s.verts[idx]) return;
+        // 토글
+        s.verts[idx].pinned = !s.verts[idx].pinned;
+        // 선택된 정점이 pinned으로 바뀌면, 시각적/물리적 불연속을 줄이기 위해
+        // 이전 위치(px,py)를 현재 위치와 동기화
+        const v = s.verts[idx];
+        v.px = v.x;
+        v.py = v.y;
+        updateStats();
+      }
+    });
+
+    /* 초기 데모 */
+    createRect(W / 2 - 200, H / 2 - 80, 100, 100);
+    createLine(W / 2 + 120, H / 2 - 40, 12, 18, true);
+    updateStats();
+
+    /* 끝 */
+  </script>
+</body>
+
+</html>
