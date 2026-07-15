@@ -1,80 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>RandomPrompter</title>
-</head>
-
-<body>
-  <main class="container">
-    <header class="header">
-      <h1 class="title">Random Prompter</h1>
-      <p class="subtitle">Convert &lt;Filename&gt; in input to random element of array from txt</p>
-    </header>
-
-    <section class="controls">
-      <div class="left-controls">
-        <button id="pickDirBtn" class="btn">Select Folder</button>
-        <label class="file-label">
-          or upload folder
-          <input id="folderInput" type="file" webkitdirectory directory multiple style="display:block;margin-top:6px" />
-        </label>
-        <div class="note">Template uses &lt;<span class="example">Filename</span>&gt; (without .txt)</div>
-      </div>
-
-      <div class="right-controls">
-        <button id="refreshBtn" class="btn">Refresh</button>
-        <button id="generateBtn" class="btn primary">Generate</button>
-      </div>
-    </section>
-
-    <section class="workspace">
-      <div class="left-pane">
-        <h3>Template
-          <select id="templateSelect" class="template-select">
-            <option value="">— load template.txt —</option>
-          </select>
-        </h3>
-        <textarea id="templateInput" class="template" placeholder="예: Today: &lt;foods&gt; + &lt;sides&gt;"></textarea>
-        <h3>Result<button id="copyResultBtn" class="btn small">Copy</button></h3>
-        </h3>
-        <div id="result" class="result"></div>
-      </div>
-
-      <div class="right-pane">
-        <div class="file-tools">
-          <h3>Text files</h3>
-          <div id="fileList" class="file-list">폴더를 선택하거나 업로드하세요.</div>
-          <div class="file-actions">
-            <button id="saveFileBtn" class="btn">Save</button>
-            <button id="downloadFileBtn" class="btn">Download Edited</button>
-          </div>
-        </div>
-
-        <div class="editor">
-          <h3>Editor</h3>
-          <div id="editorMeta" class="editor-meta">선택된 파일: <span id="currentFileName">-</span></div>
-          <textarea id="fileEditor" class="file-editor" placeholder="Select a file to edit its contents"></textarea>
-        </div>
-      </div>
-    </section>
-
-    <footer class="footer">
-      <small>Version 1.0 — File System Access API recommended (Chrome/Edge). If unsupported, use folder upload.</small>
-    </footer>
-  </main>
-
   <style>
     :root {
-      --bg: #f6f8fa;
-      --card: #ffffff;
-      --accent: #2b6df6;
+      --bg: #ffffff;
+      --card: #f7f8fa;
       --muted: #6b7280;
-      --radius: 10px;
-      --shadow: 0 6px 18px rgba(19, 24, 31, 0.06);
-      --primary: #0b5fff;
+      --text: #0f172a;
+      --accent: #2563eb;
+      --border: #e6e9ef;
+      --radius: 12px;
+      --gap: 12px;
+      --max-width: 980px;
+      --shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      font-size: 16px;
     }
 
     * {
@@ -88,219 +32,317 @@
 
     body {
       margin: 0;
-      font-family: Inter, "Noto Sans KR", system-ui, -apple-system, "Segoe UI", Arial;
-      background: linear-gradient(180deg, var(--bg), #eef2ff 60%);
-      color: #0f172a;
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      padding: 16px;
       display: flex;
-      align-items: center;
       justify-content: center;
-      padding: 28px;
     }
 
     .container {
       width: 100%;
-      max-width: 1100px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 18px;
+      max-width: var(--max-width);
+    }
+
+    .topbar {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      max-height: 100vh;
-      overflow-y: auto;
+      gap: 4px;
+      margin-bottom: 12px
     }
 
-    .header .title {
+    .title {
       margin: 0;
-      font-size: 20px
+      font-size: 1.125rem;
+      font-weight: 600
     }
 
-    .header .subtitle {
-      margin: 6px 0 0 0;
+    .subtitle {
       color: var(--muted);
-      font-size: 13px
+      font-size: 0.875rem
     }
 
     .controls {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    .left-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 8px
-    }
-
-    .file-label {
-      display: inline-block;
-      font-size: 13px;
-      color: var(--muted)
-    }
-
-    .note {
-      font-size: 12px;
-      color: var(--muted)
-    }
-
-    .example {
-      font-weight: 600;
-      color: var(--accent)
-    }
-
-    .right-controls {
-      display: flex;
-      gap: 10px;
-      align-items: center
-    }
-
-    .btn {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 8px 10px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .btn.primary {
-      background: var(--primary)
-    }
-
-    .btn.small {
-      padding: 6px 8px;
-      font-size: 13px;
-      margin-left: 8px;
-    }
-
-    .template-select {
-      margin-left: 12px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      border: 1px solid #e6e9ee;
-      font-size: 13px;
-    }
-
-    .workspace {
-      display: flex;
-      gap: 12px;
-    }
-
-    .left-pane,
-    .right-pane {
-      background: #f8fafc;
-      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 12px;
-      border: 1px solid #eef2ff;
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
     }
 
-    .left-pane {
-      flex: 1.3;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .right-pane {
-      flex: 0.95;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-width: 300px;
-    }
-
-    .template {
-      width: 100%;
-      min-height: 120px;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #e6e9ee
-    }
-
-    .result {
-      min-height: 120px;
-      padding: 10px;
-      border-radius: 6px;
-      background: white;
-      border: 1px solid #e6e9ee;
-      white-space: pre-wrap
-    }
-
-    .file-list {
-      max-height: 180px;
-      overflow: auto;
-      background: white;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #e6e9ee
-    }
-
-    .file-list button {
-      display: block;
-      width: 100%;
-      text-align: left;
-      padding: 6px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      border-bottom: 1px dashed #eef2ff
-    }
-
-    .file-list button:last-child {
-      border-bottom: none
-    }
-
-    .editor-meta {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 6px
-    }
-
-    .file-editor {
-      width: 100%;
-      min-height: 220px;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #e6e9ee;
-      resize: vertical
-    }
-
-    .file-actions {
+    .row {
       display: flex;
       gap: 8px;
       margin-top: 8px
     }
 
+    .select {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: white;
+      border-color: transparent
+    }
+
+    .template-input {
+      width: 100%;
+      height: 240px;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      min-height: 140px;
+      font-size: 0.98rem;
+      resize: vertical;
+    }
+
+    /* Main layout: file list compact, preview below editor */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    /* 파일 목록을 작게 고정 (가로 스크롤 허용) */
+    .compact-file-list {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      overflow: auto;
+      white-space: nowrap;
+      max-height: 64px;
+    }
+
+    .compact-file-list button {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .editor-area {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    .editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px
+    }
+
+    .current-file {
+      font-weight: 600;
+      color: var(--muted)
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 8px
+    }
+
+    .result-box {
+      margin-top: 10px;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      background: #fff;
+      min-height: 100px;
+      white-space: pre-wrap;
+      font-size: 0.96rem;
+    }
+
+    .preview-area {
+      margin-top: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .preview-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px
+    }
+
+    .preview-lines {
+      max-height: 220px;
+      overflow: auto;
+      border-radius: 8px;
+      padding: 6px;
+      background: #fbfcff;
+      border: 1px solid var(--border)
+    }
+    /* preview container: 세로 스크롤만 허용, 가로로 넘치지 않게 */
+    .preview-lines {
+      max-height: 220px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    /* 각 줄: 체크박스 고정, 텍스트는 유연하게 줄바꿈 */
+    .preview-line {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 6px;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    /* 체크박스가 레이아웃을 밀지 않도록 고정 크기 */
+    .preview-line input[type="checkbox"] {
+      flex: 0 0 20px;
+      width: 20px;
+      height: 20px;
+    }
+    /* 핵심: 텍스트는 줄바꿈 허용, 긴 단어 강제 분할, 축소 허용 */
+    .preview-line .line-text {
+      flex: 1 1 auto;
+      /* 가로 공간을 유연하게 사용 */
+      min-width: 0;
+      /* flex 아이템 축소 허용 (필수) */
+      white-space: normal;
+      /* 줄바꿈 허용 */
+      overflow-wrap: anywhere;
+      /* 긴 단어 강제 분할 */
+      word-break: break-word;
+      /* 호환성 보강 */
+      hyphens: auto;
+      /* 가능한 경우 하이픈 분할 허용 */
+      font-family: ui-monospace, monospace;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
     .footer {
-      text-align: right;
+      margin-top: 12px;
+      text-align: center;
       color: var(--muted);
-      font-size: 12px
+      font-size: 0.85rem
+    }
+
+    .visually-hidden {
+      position: absolute !important;
+      height: 1px;
+      width: 1px;
+      overflow: hidden;
+      clip: rect(1px, 1px, 1px, 1px);
+      white-space: nowrap
+    }
+
+    @media(min-width:820px) {
+      .main-grid {
+        grid-template-columns: 1fr
+      }
+
+      .compact-file-list {
+        max-height: 80px
+      }
     }
   </style>
+</head>
+
+<body>
+  <main class="container">
+    <header class="topbar">
+      <h1 class="title">RandomPrompter</h1>
+      <small class="subtitle">Light theme</small>
+    </header>
+
+    <section class="controls">
+      <label class="file-label">
+        <input id="folderInput" type="file" webkitdirectory directory multiple class="visually-hidden" />
+        <button id="chooseFolderBtn" class="btn">폴더/파일 선택</button>
+      </label>
+
+      <div class="row">
+        <select id="templateSelect" class="select" aria-label="템플릿 선택"></select>
+        <button id="generateBtn" class="btn primary">생성</button>
+      </div>
+
+      <textarea id="templateInput" class="template-input" placeholder="템플릿을 입력하세요. 예: Hello, <name>"></textarea>
+    </section>
+
+    <section class="main-grid">
+      <div class="compact-file-list" id="fileList">No .txt files loaded.</div>
+
+      <div class="editor-area">
+        <div class="editor-header">
+          <div class="editor-actions">
+            <button id="copyResultBtn" class="btn">Copy</button>
+          </div>
+        </div>
+
+        <!-- 결과창 (템플릿 생성 결과) -->
+        <div class="result-box" id="result">결과가 여기에 표시됩니다.</div>
+
+        <!-- txt 파일 미리보기 섹션 (결과창 아래로 유지) -->
+        <div class="preview-area" id="previewArea" aria-live="polite">
+          <div class="preview-controls">
+            <div style="flex:1;color:var(--muted)"><span id="currentFileName" class="current-file"></span></div>
+            <button id="selectAllBtn" class="btn">Select all</button>
+            <button id="clearSelectionBtn" class="btn">Clear</button>
+          </div>
+          <div class="preview-lines" id="previewLines">미리보기를 위해 파일을 선택하세요.</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <small>© Template Generator</small>
+    </footer>
+  </main>
 
   <script>
-    const pickDirBtn = document.getElementById('pickDirBtn');
     const folderInput = document.getElementById('folderInput');
     const generateBtn = document.getElementById('generateBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
     const resultEl = document.getElementById('result');
     const templateInput = document.getElementById('templateInput');
     const fileListEl = document.getElementById('fileList');
-    const fileEditor = document.getElementById('fileEditor');
     const currentFileNameEl = document.getElementById('currentFileName');
-    const saveFileBtn = document.getElementById('saveFileBtn');
-    const downloadFileBtn = document.getElementById('downloadFileBtn');
     const copyResultBtn = document.getElementById('copyResultBtn');
     const templateSelect = document.getElementById('templateSelect');
+    const chooseFolderBtn = document.getElementById('chooseFolderBtn');
+    const previewLinesEl = document.getElementById('previewLines');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
 
     let dataMap = {}; // { filenameKey: [{value, weight, raw, handle?}], ... }
     let fileHandles = {}; // filenameKey -> FileSystemFileHandle (if available)
     let currentFileKey = null; // selected file key
+    let selectedLinesMap = {}; // filenameKey -> Set(index)
 
     // Utility: parse lines into {value, weight, raw}
     function parseLinesToItems(lines) {
@@ -320,27 +362,10 @@
         .filter(it => it.value.length > 0);
     }
 
-    // FileSystem Access API path: ask user to pick a directory
-    pickDirBtn.addEventListener('click', async () => {
-      if (window.showDirectoryPicker) {
-        try {
-          const dirHandle = await window.showDirectoryPicker();
-          await loadAllTxtFromDirectoryHandle(dirHandle);
-          renderFileList();
-          updateTemplateSelect();
-          autoSelectFirst();
-          resultEl.textContent = `Loaded: ${Object.keys(dataMap).join(', ')}`;
-          window.lastDirHandle = dirHandle; // 폴더 핸들을 전역에 저장
-        } catch (err) {
-          console.error(err);
-          resultEl.textContent = 'Directory pick cancelled or failed.';
-        }
-      } else {
-        resultEl.textContent = 'Directory picker not supported. Use folder upload input below.';
-      }
+    chooseFolderBtn.addEventListener('click', () => {
+      folderInput.click();
     });
 
-    // Fallback: user uploads folder via input (webkitdirectory)
     folderInput.addEventListener('change', async (e) => {
       const files = Array.from(e.target.files || []);
       window.lastUploadedFiles = files;
@@ -351,43 +376,6 @@
       resultEl.textContent = `Loaded: ${Object.keys(dataMap).join(', ')}`;
     });
 
-    refreshBtn.addEventListener('click', async () => {
-      if (window.lastDirHandle) {
-        //폴더 선택 방식으로 불러온 경우
-        try {
-          await loadAllTxtFromDirectoryHandle(window.lastDirHandle);
-          renderFileList();
-          updateTemplateSelect();
-          autoSelectFirst();
-          resultEl.textContent = '폴더에서 파일을 다시 불러왔습니다.';
-          return;
-        } catch (err) {
-          console.error('폴더 새로고침 실패:', err);
-          resultEl.textContent = '폴더 새로고침 실패';
-          return;
-        }
-      }
-
-      if (window.lastUploadedFiles && window.lastUploadedFiles.length > 0) {
-        //업로드 방식으로 불러온 경우
-        try {
-          await loadFilesFromFileList(window.lastUploadedFiles);
-          renderFileList();
-          updateTemplateSelect();
-          autoSelectFirst();
-          resultEl.textContent = '업로드된 파일을 다시 불러왔습니다.';
-          return;
-        } catch (err) {
-          console.error('업로드 새로고침 실패:', err);
-          resultEl.textContent = '업로드 새로고침 실패';
-          return;
-        }
-      }
-
-      resultEl.textContent = '불러온 폴더나 파일이 없습니다.';
-    });
-
-    // Generate button
     generateBtn.addEventListener('click', () => {
       const template = templateInput.value || '';
       if (!template) {
@@ -398,56 +386,10 @@
         resultEl.textContent = 'No text arrays loaded. Select folder or upload files.';
         return;
       }
-      const out = fillTemplateWithRecursion(template, 30); // 최대 30회 반복 치환
+      const out = fillTemplateWithRecursion(template, 30);
       resultEl.textContent = out;
     });
 
-    // Save edited file (uses File System Access API if handle present)
-    saveFileBtn.addEventListener('click', async () => {
-      if (!currentFileKey) {
-        resultEl.textContent = 'Select a file to save.';
-        return;
-      }
-      const entry = (dataMap[currentFileKey] && dataMap[currentFileKey][0]) || null;
-      const handle = fileHandles[currentFileKey] || (entry && entry.handle);
-      const text = fileEditor.value;
-      if (handle && handle.createWritable) {
-        try {
-          const writable = await handle.createWritable();
-          await writable.write(text);
-          await writable.close();
-          const lines = text.split(/\r?\n/).map(s => s.replace(/\/\/.*$/, '').trim()).filter(s => s.length > 0);
-          dataMap[currentFileKey] = parseLinesToItems(lines).map(it => ({ ...it, handle }));
-          resultEl.textContent = `Saved ${currentFileKey}`;
-        } catch (err) {
-          console.error(err);
-          resultEl.textContent = 'Save failed: ' + err.message;
-        }
-      } else {
-        resultEl.textContent = 'File System Access API not available for saving. Use "Download Edited" button to get edited file.';
-      }
-    });
-
-    // Download edited file as fallback
-    downloadFileBtn.addEventListener('click', () => {
-      if (!currentFileKey) {
-        resultEl.textContent = 'Select a file to download.';
-        return;
-      }
-      const text = fileEditor.value || '';
-      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = currentFileKey + '.txt';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      resultEl.textContent = `Downloaded ${currentFileKey}.txt`;
-    });
-
-    // Render file list UI
     function renderFileList() {
       fileListEl.innerHTML = '';
       const keys = Object.keys(dataMap).sort();
@@ -464,19 +406,62 @@
       }
     }
 
-    // Select a file to edit
     function selectFileKey(key) {
       currentFileKey = key;
       currentFileNameEl.textContent = key + '.txt';
       const items = dataMap[key] || [];
       const rawText = items.map(it => (it.raw ? it.raw : (it.weight && it.weight !== 100 ? `${it.weight}:${it.value}` : it.value))).join('\n');
-      fileEditor.value = rawText;
+      // render preview lines with checkboxes
+      renderPreviewLines(key, items);
     }
 
-    // Replaces <...> patterns, supports:
-    // - <filename> -> use dataMap[filename] (items are {value,weight})
-    // - <opt1|opt2|4:opt3> -> inline options where plain tokens have weight 1, "N:token" gives weight N
-    // Repeats replacement up to maxIterations to resolve nested placeholders
+    // Render preview lines with checkboxes
+    function renderPreviewLines(key, items) {
+      previewLinesEl.innerHTML = '';
+      if (!items || items.length === 0) {
+        previewLinesEl.textContent = 'Empty file.';
+        return;
+      }
+      if (!selectedLinesMap[key]) selectedLinesMap[key] = new Set();
+      items.forEach((it, idx) => {
+        const row = document.createElement('div');
+        row.className = 'preview-line';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = selectedLinesMap[key].has(idx);
+        cb.addEventListener('change', () => {
+          if (cb.checked) selectedLinesMap[key].add(idx);
+          else selectedLinesMap[key].delete(idx);
+        });
+        const span = document.createElement('div');
+        span.className = 'line-text';
+        span.textContent = it.raw ? it.raw : it.value;
+        // clicking the text toggles checkbox
+        span.addEventListener('click', () => {
+          cb.checked = !cb.checked;
+          if (cb.checked) selectedLinesMap[key].add(idx);
+          else selectedLinesMap[key].delete(idx);
+        });
+        row.appendChild(cb);
+        row.appendChild(span);
+        previewLinesEl.appendChild(row);
+      });
+    }
+
+    selectAllBtn.addEventListener('click', () => {
+      if (!currentFileKey) return;
+      const items = dataMap[currentFileKey] || [];
+      selectedLinesMap[currentFileKey] = new Set(items.map((_, i) => i));
+      renderPreviewLines(currentFileKey, items);
+    });
+
+    clearSelectionBtn.addEventListener('click', () => {
+      if (!currentFileKey) return;
+      selectedLinesMap[currentFileKey] = new Set();
+      renderPreviewLines(currentFileKey, dataMap[currentFileKey] || []);
+    });
+
+    // Replaces <...> patterns, supports inline options and filename keys
     function fillTemplateWithRecursion(template, maxIterations = 30) {
       function parseInlineOptions(inner) {
         const DEFAULT_INLINE_WEIGHT = 1;
@@ -516,23 +501,19 @@
 
         current = current.replace(/<([^<>]+)>/g, (match, inner) => {
           const key = inner.trim();
-          // Inline options if contains '|' (user-specified format)
           if (key.includes('|')) {
             const chosen = pickFromInline(key);
             replacedInThisPass = true;
             return chosen;
           }
 
-          // Otherwise treat as filename key referencing dataMap
           const items = dataMap[key];
           if (!items || items.length === 0) {
-            // leave empty if no such key
-            replacedInThisPass = true; // we did attempt replacement (to empty)
+            replacedInThisPass = true;
             return '';
           }
 
-          // items expected as [{value, weight}, ...]
-          const chosen = pickRandomFromItems(items);
+          const chosen = pickRandomFromItems(items, key);
           replacedInThisPass = true;
           return chosen;
         });
@@ -544,24 +525,32 @@
       return current;
     }
 
-
     // Weighted random pick: items = [{value, weight}, ...]
-    function pickRandomFromItems(items) {
-      const total = items.reduce((s, it) => s + (it.weight > 0 ? it.weight : 0), 0);
-      if (total <= 0) return items[items.length - 1].value || '';
+    // 확장: key를 전달하면 selectedLinesMap[key]가 있으면 그 인덱스들만 사용
+    function pickRandomFromItems(items, key = null) {
+      let pool = items;
+      if (key && selectedLinesMap[key] && selectedLinesMap[key].size > 0) {
+        const idxs = Array.from(selectedLinesMap[key]).filter(i => i >= 0 && i < items.length);
+        if (idxs.length > 0) {
+          pool = idxs.map(i => items[i]);
+        }
+      }
+      const total = pool.reduce((s, it) => s + (it.weight > 0 ? it.weight : 0), 0);
+      if (total <= 0) return pool[pool.length - 1].value || '';
       let r = Math.random() * total;
-      for (const it of items) {
+      for (const it of pool) {
         const w = it.weight > 0 ? it.weight : 0;
         if (r < w) return it.value;
         r -= w;
       }
-      return items[items.length - 1].value || '';
+      return pool[pool.length - 1].value || '';
     }
 
     // Load files from a FileList (upload fallback)
     async function loadFilesFromFileList(fileList) {
       dataMap = {};
       fileHandles = {};
+      selectedLinesMap = {};
       for (const f of fileList) {
         if (!f.name.toLowerCase().endsWith('.txt')) continue;
         try {
@@ -569,6 +558,7 @@
           const lines = text.split(/\r?\n/).map(s => s.replace(/\/\/.*$/, '').trim()).filter(s => s.length > 0);
           const key = f.name.replace(/\.[^/.]+$/, '');
           dataMap[key] = parseLinesToItems(lines);
+          selectedLinesMap[key] = new Set(); // 초기 선택 비어있음
         } catch (err) {
           console.warn('Failed to read', f.name, err);
         }
@@ -579,6 +569,7 @@
     async function loadAllTxtFromDirectoryHandle(dirHandle) {
       dataMap = {};
       fileHandles = {};
+      selectedLinesMap = {};
       for await (const [name, handle] of dirHandle.entries()) {
         if (handle.kind === 'file' && name.toLowerCase().endsWith('.txt')) {
           try {
@@ -589,6 +580,7 @@
             const items = parseLinesToItems(lines).map(it => ({ ...it, handle }));
             dataMap[key] = items;
             fileHandles[key] = handle;
+            selectedLinesMap[key] = new Set();
           } catch (err) {
             console.warn('Failed to read file in dir', name, err);
           }
@@ -596,33 +588,24 @@
       }
     }
 
-    // Optional: auto-select first file when data loaded
     function autoSelectFirst() {
       const keys = Object.keys(dataMap);
       if (keys.length > 0) selectFileKey(keys[0]);
     }
 
-    //Copy button
     copyResultBtn.addEventListener('click', async () => {
       const text = resultEl.innerText || resultEl.textContent || '';
       if (!text) {
-        // 결과가 비어있으면 시각적 피드백
         copyResultBtn.textContent = 'Empty';
         setTimeout(() => copyResultBtn.textContent = 'Copy', 1000);
         return;
       }
-
-      // 우선 navigator.clipboard 사용 (HTTPS/로컬에서 동작)
       try {
         await navigator.clipboard.writeText(text);
         copyResultBtn.textContent = 'Copied';
         setTimeout(() => copyResultBtn.textContent = 'Copy', 1200);
         return;
-      } catch (err) {
-        // 실패 시 fallback
-      }
-
-      // Fallback: 임시 textarea 만들어 선택 후 복사
+      } catch (err) { }
       try {
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -641,9 +624,8 @@
       }
     });
 
-    // 호출용: dataMap을 기준으로 templateSelect를 갱신
+    // templateSelect update and change handling
     function updateTemplateSelect() {
-      // 초기화
       if (!templateSelect) return;
       templateSelect.innerHTML = '';
       const defaultOpt = document.createElement('option');
@@ -651,29 +633,23 @@
       defaultOpt.textContent = '— load template.txt —';
       templateSelect.appendChild(defaultOpt);
 
-      // template.txt (확장자 없이 key가 'template' 혹은 'template.txt'를 사용 중이라면 'template') 찾기
-      // 여기서는 파일명 키가 'template'인 경우를 기본으로 처리
-      const key = 'template'; // 만약 다른 키명 사용 시 변경 가능
+      const key = 'template';
       const items = dataMap[key];
 
       if (!items || items.length === 0) {
-        // 비활성화 상태로 두기
         templateSelect.disabled = true;
         return;
       }
 
       templateSelect.disabled = false;
-      // 각 항목을 option으로 추가 (항목의 원문(raw)이나 value를 사용)
       items.forEach((it, idx) => {
         const opt = document.createElement('option');
-        opt.value = idx; // index로 참조
-        // 표시용 텍스트: raw가 있으면 raw, 없으면 value
-        opt.textContent = idx; //it.raw ? it.raw : it.value;
+        opt.value = idx;
+        opt.textContent = idx;
         templateSelect.appendChild(opt);
       });
     }
 
-    // 드롭다운에서 선택되면 templateInput에 즉시 반영
     if (templateSelect) {
       templateSelect.addEventListener('change', () => {
         const val = templateSelect.value;
@@ -682,11 +658,17 @@
         const items = dataMap[key];
         const idx = parseInt(val, 10);
         if (!items || isNaN(idx) || idx < 0 || idx >= items.length) return;
-        // 선택된 항목의 원문(raw) 또는 value를 템플릿으로 설정
         const chosenText = items[idx].raw ? items[idx].raw : items[idx].value;
         templateInput.value = chosenText;
       });
     }
+
+    // Optional: allow pressing Enter on file list buttons to select
+    fileListEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target && e.target.tagName === 'BUTTON') {
+        e.target.click();
+      }
+    });
   </script>
 </body>
 
