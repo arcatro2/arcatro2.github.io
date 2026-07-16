@@ -134,6 +134,7 @@
       overflow: auto;
       white-space: nowrap;
       max-height: 64px;
+      margin-top: 10px;
     }
 
     .compact-file-list button {
@@ -151,6 +152,7 @@
       border-radius: 10px;
       padding: 10px;
       box-shadow: var(--shadow);
+      overflow:hidden;
     }
 
     .editor-header {
@@ -187,6 +189,7 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 10px;
+
     }
 
     .preview-controls {
@@ -296,8 +299,6 @@
     </section>
 
     <section class="main-grid">
-      <div class="compact-file-list" id="fileList">No .txt files loaded.</div>
-
       <div class="editor-area">
         <div class="editor-header">
           <div class="editor-actions">
@@ -308,7 +309,8 @@
         <!-- 결과창 (템플릿 생성 결과) -->
         <div class="result-box" id="result">결과가 여기에 표시됩니다.</div>
 
-        <!-- txt 파일 미리보기 섹션 (결과창 아래로 유지) -->
+        <!-- txt 파일 미리보기 섹션 -->
+        <div class="compact-file-list" id="fileList">No .txt files loaded.</div>
         <div class="preview-area" id="previewArea" aria-live="polite">
           <div class="preview-controls">
             <div style="flex:1;color:var(--muted)"><span id="currentFileName" class="current-file"></span></div>
