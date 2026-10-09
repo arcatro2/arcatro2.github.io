@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TXT File Editor</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #212529;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: 100vh;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #ffffff;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #ffffff;
+            border: 1px solid #ced4da;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: #e9ecef;
+        }
+
+        button.primary {
+            background-color: #212529;
+            color: #ffffff;
+            border-color: #212529;
+        }
+
+        button.primary:hover {
+            background-color: #343a40;
+        }
+
+        .status-text {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 3px;
+            margin-left: auto;
+            border: 1px solid transparent;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .status-text.status-info {
+            color: #495057;
+            background-color: #e9ecef;
+            border-color: #ced4da;
+        }
+
+        .status-text.status-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeba2;
+            font-weight: 600;
+        }
+
+        .status-text.status-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            font-weight: 600;
+        }
+
+        .status-text.status-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .workspace {
+            display: flex;
+            gap: 12px;
+            flex: 1;
+            overflow-x: auto;
+            align-items: stretch;
+            padding-bottom: 8px;
+        }
+
+        .column {
+            min-width: 360px;
+            width: 360px;
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .column-header {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 8px;
+            background: #f1f3f5;
+        }
+
+        .column-header select {
+            flex: 1;
+            padding: 4px;
+            border: 1px solid #ced4da;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .line-view {
+            flex: 1;
+            overflow-y: auto;
+            border-bottom: 1px solid #dee2e6;
+            background: #fafafa;
+        }
+
+        .line-item {
+            padding: 4px 8px;
+            font-size: 12px;
+            font-family: monospace;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            user-select: none;
+        }
+
+        .line-item:hover {
+            background-color: #e9ecef;
+        }
+
+        .line-item.selected {
+            background-color: #d3f9d8;
+            font-weight: bold;
+        }
+
+        textarea.raw-editor {
+            flex: 1;
+            width: 100%;
+            border: none;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            resize: none;
+            outline: none;
+        }
+
+        .combined-section {
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 220px;
+        }
+
+        .combined-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .combined-header h3 {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .template-input {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            font-family: monospace;
+            outline: none;
+        }
+
+        .combined-box {
+            width: 100%;
+            height: 80px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 8px;
+                gap: 8px;
+            }
+
+            .toolbar {
+                flex-wrap: wrap;
+                padding: 8px;
+            }
+
+            .status-text {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 4px;
+            }
+
+            .workspace {
+                flex-direction: column;
+                overflow-x: hidden;
+                overflow-y: auto;
+            }
+
+            .column {
+                width: 100%;
+                min-width: 100%;
+                min-height: 280px;
+            }
+
+            .combined-section {
+                max-height: none;
+            }
+
+            .combined-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 상단 컨트롤 툴바 -->
+    <div class="toolbar">
+        <button id="btn-load-dir" class="primary">폴더 열기</button>
+        <button id="btn-add-column">섹션 추가 (+)</button>
+        <button id="btn-save-all" class="primary">전체 저장</button>
+        <span class="status-text status-info" id="status-text">폴더가 선택되지 않음</span>
+    </div>
+
+    <!-- 가로 스크롤 에디터 섹션 영역 -->
+    <div class="workspace" id="workspace"></div>
+
+    <!-- 선택한 라인 조합 표시 섹션 -->
+    <div class="combined-section">
+        <div class="combined-header">
+            <h3>선택한 문자열 합치기</h3>
+            <div>
+                <button id="btn-clear-lines">선택 초기화</button>
+                <button id="btn-copy-combined">복사</button>
+            </div>
+        </div>
+        <input type="text" id="template-input" class="template-input"
+            placeholder="틀 입력 (예: A girl is <1>, A boy is <2>)"
+            value="<template>">
+        <div class="combined-box" id="combined-output"></div>
+    </div>
+
+    <!-- Hidden input for file picker fallback -->
+    <input type="file" id="fallback-file-input" webkitdirectory directory multiple style="display: none;">
+
+    <script>
+        /**
+         * 애플리케이션 상태 관리 구조체
+         */
+        const state = {
+            dirHandle: null,           // 파일 시스템 폴더 핸들
+            filesMap: new Map(),       // 파일명 -> FileHandle 또는 File 객체 매핑
+            fileContents: new Map(),   // 파일명 -> 현재 수정된 텍스트 내용
+            originalContents: new Map(), // 원본 백업용
+            selectedLines: new Map(),  // 섹션별 선택 라인 관리 (colId -> Map<lineIdx, text>)
+            nextColumnId: 1,
+            isFallback: false          // File System Access API 비활성화 시 fallback 모드
+        };
+
+        // DOM 요소를 미리 캐싱
+        const workspace = document.getElementById('workspace');
+        const statusText = document.getElementById('status-text');
+        const combinedOutput = document.getElementById('combined-output');
+        const templateInput = document.getElementById('template-input');
+        const fallbackFileInput = document.getElementById('fallback-file-input');
+
+        /**
+         * 상태/경고 메시지 출력 헬퍼 함수
+         * @param {string} message 
+         * @param {'info'|'warning'|'error'|'success'} type 
+         */
+        function setStatus(message, type = 'info') {
+            statusText.innerText = message;
+            statusText.className = `status-text status-${type}`;
+        }
+
+        /**
+         * 1. 지정한 폴더 내 txt 파일 불러오기
+         */
+        document.getElementById('btn-load-dir').addEventListener('click', async () => {
+            state.filesMap.clear();
+            state.fileContents.clear();
+
+            if ('showDirectoryPicker' in window) {
+                try {
+                    state.dirHandle = await window.showDirectoryPicker();
+                    state.isFallback = false;
+
+                    for await (const entry of state.dirHandle.values()) {
+                        if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.txt')) {
+                            state.filesMap.set(entry.name, entry);
+                            const file = await entry.getFile();
+                            const text = await file.text();
+                            state.fileContents.set(entry.name, text);
+                            state.originalContents.set(entry.name, text);
+                        }
+                    }
+                    setStatus(`불러온 txt 파일: ${state.filesMap.size}개`, 'success');
+
+                    let PRESET_FILES = [];
+                    try {
+                        const presetFileHandle = await state.dirHandle.getFileHandle('preset_files.txt');
+                        const presetFile = await presetFileHandle.getFile();
+                        const presetText = await presetFile.text();
+                        PRESET_FILES = presetText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+                        workspace.innerHTML = '';
+                        state.selectedLines.clear();
+                        PRESET_FILES.forEach(fileName => {
+                            addColumn(fileName);
+                        });
+                    } catch (err) {}
+
+                    updateAllDropdowns();
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.warn('showDirectoryPicker 실패, fallback으로 전환합니다.', err);
+                        fallbackFileInput.click();
+                    }
+                }
+            } else {
+                fallbackFileInput.click();
+            }
+        });
+
+        fallbackFileInput.addEventListener('change', async (e) => {
+            state.isFallback = true;
+            const files = e.target.files;
+
+            for (const file of files) {
+                if (file.name.toLowerCase().endsWith('.txt')) {
+                    state.filesMap.set(file.name, file);
+                    const text = await file.text();
+                    state.fileContents.set(file.name, text);
+                    state.originalContents.set(file.name, text);
+                }
+            }
+
+            setStatus(`불러온 txt 파일: ${state.filesMap.size}개 (보안 fallback 모드)`, 'warning');
+            updateAllDropdowns();
+        });
+
+        /**
+         * 동일 파일 편집 모드 중복 검사 함수
+         */
+        function isEditModeActiveForFile(fileName, currentColumn) {
+            if (!fileName) return false;
+            const columns = workspace.querySelectorAll('.column');
+            for (const col of columns) {
+                if (col !== currentColumn) {
+                    const selectEl = col.querySelector('.file-select');
+                    const isLineMode = col.dataset.isLineMode === 'true';
+                    if (selectEl.value === fileName && !isLineMode) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /**
+         * 2. 섹션(칼럼) 생성 및 제거 기능
+         */
+        document.getElementById('btn-add-column').addEventListener('click', () => {
+            addColumn();
+        });
+
+        function addColumn(fileNameToSelect = "") {
+            const colId = state.nextColumnId++;
+            const colEl = document.createElement('div');
+            colEl.className = 'column';
+            colEl.dataset.id = colId;
+            colEl.dataset.isLineMode = 'true';
+
+            colEl.innerHTML = `
+                <div class="column-header">
+                    <select class="file-select">
+                        <option value="">-- 파일 선택 --</option>
+                    </select>
+                    <button class="btn-toggle-view" title="라인선택/직접수정 전환">모드전환</button>
+                    <button class="btn-remove-col">삭제</button>
+                </div>
+                <div class="editor-container">
+                    <div class="line-view"></div>
+                    <textarea class="raw-editor" placeholder="파일을 선택하세요." style="display: none;"></textarea>
+                </div>
+            `;
+
+            workspace.appendChild(colEl);
+
+            const selectEl = colEl.querySelector('.file-select');
+            const textareaEl = colEl.querySelector('.raw-editor');
+            const lineViewEl = colEl.querySelector('.line-view');
+            const toggleBtn = colEl.querySelector('.btn-toggle-view');
+            const removeBtn = colEl.querySelector('.btn-remove-col');
+
+            populateDropdown(selectEl);
+
+            if (fileNameToSelect) {
+                if (state.filesMap.has(fileNameToSelect)) {
+                    selectEl.value = fileNameToSelect;
+                    textareaEl.value = state.fileContents.get(fileNameToSelect) || '';
+                } else {
+                    setStatus(`[경고] '${fileNameToSelect}' 파일을 찾을 수 없습니다.`, 'warning');
+                }
+            }
+
+            selectEl.addEventListener('change', () => {
+                const fileName = selectEl.value;
+
+                if (fileName && state.fileContents.has(fileName)) {
+                    textareaEl.value = state.fileContents.get(fileName);
+                } else {
+                    textareaEl.value = '';
+                }
+
+                colEl.dataset.isLineMode = 'true';
+                lineViewEl.style.display = 'block';
+                textareaEl.style.display = 'none';
+
+                state.selectedLines.delete(colId);
+                renderLineView(colEl);
+                updateCombinedDisplay();
+            });
+
+            textareaEl.addEventListener('input', () => {
+                const fileName = selectEl.value;
+                if (fileName) {
+                    state.fileContents.set(fileName, textareaEl.value);
+                }
+            });
+
+            toggleBtn.addEventListener('click', () => {
+                const isLineMode = colEl.dataset.isLineMode === 'true';
+                const fileName = selectEl.value;
+
+                if (isLineMode) {
+                    if (fileName && isEditModeActiveForFile(fileName, colEl)) {
+                        setStatus(`'${fileName}' 파일은 이미 다른 섹션에서 편집 모드로 열려있습니다.`, 'warning');
+                        return;
+                    }
+                    colEl.dataset.isLineMode = 'false';
+                    lineViewEl.style.display = 'none';
+                    textareaEl.style.display = 'block';
+                } else {
+                    colEl.dataset.isLineMode = 'true';
+
+                    if (fileName) {
+                        const updatedContent = textareaEl.value;
+                        
+                        // 현재 다른 모든 섹션들을 순회하며 같은 파일이 열려있는 경우 내용 동기화 및 렌더링 갱신
+                        const columns = workspace.querySelectorAll('.column');
+                        columns.forEach(otherCol => {
+                            const otherSelect = otherCol.querySelector('.file-select');
+                            if (otherSelect && otherSelect.value === fileName) {
+                                const otherTextarea = otherCol.querySelector('.raw-editor');
+                                if (otherTextarea) {
+                                    otherTextarea.value = updatedContent;
+                                }
+                                // 읽기 모드인 경우 라인 뷰 재렌더링
+                                if (otherCol.dataset.isLineMode === 'true') {
+                                    renderLineView(otherCol);
+                                }
+                            }
+                        });
+                    }
+
+                    renderLineView(colEl);
+                    lineViewEl.style.display = 'block';
+                    textareaEl.style.display = 'none';
+                    updateCombinedDisplay();
+                }
+            });
+
+            removeBtn.addEventListener('click', () => {
+                state.selectedLines.delete(colId);
+                colEl.remove();
+                updateCombinedDisplay();
+            });
+
+            renderLineView(colEl);
+        }
+
+        function populateDropdown(selectEl) {
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = '<option value="">-- 파일 선택 --</option>';
+            for (const fileName of state.filesMap.keys()) {
+                const opt = document.createElement('option');
+                opt.value = fileName;
+                opt.textContent = fileName;
+                selectEl.appendChild(opt);
+            }
+            selectEl.value = currentVal;
+        }
+
+        function updateAllDropdowns() {
+            const dropdowns = document.querySelectorAll('.file-select');
+            dropdowns.forEach(select => populateDropdown(select));
+        }
+
+        /**
+         * 라인 뷰 렌더링 함수
+         */
+        function renderLineView(colEl) {
+            const colId = parseInt(colEl.dataset.id, 10);
+            const textareaEl = colEl.querySelector('.raw-editor');
+            const lineViewEl = colEl.querySelector('.line-view');
+            const lines = textareaEl.value.split('\n');
+
+            const colSelections = state.selectedLines.get(colId);
+
+            lineViewEl.innerHTML = '';
+            lines.forEach((lineText, idx) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'line-item';
+                lineDiv.textContent = lineText === '' ? ' ' : lineText;
+
+                if (colSelections && colSelections.has(idx)) {
+                    lineDiv.classList.add('selected');
+                }
+
+                lineDiv.addEventListener('click', () => {
+                    toggleLineSelection(colEl, idx, lineText);
+                });
+
+                lineViewEl.appendChild(lineDiv);
+            });
+        }
+
+        /**
+         * 한 섹션 내 다중 선택/해제 처리
+         */
+        function toggleLineSelection(colEl, lineIdx, text) {
+            const colId = parseInt(colEl.dataset.id, 10);
+            
+            if (!state.selectedLines.has(colId)) {
+                state.selectedLines.set(colId, new Map());
+            }
+
+            const colSelections = state.selectedLines.get(colId);
+
+            if (colSelections.has(lineIdx)) {
+                colSelections.delete(lineIdx);
+                if (colSelections.size === 0) {
+                    state.selectedLines.delete(colId);
+                }
+            } else {
+                colSelections.set(lineIdx, text);
+            }
+
+            renderLineView(colEl);
+            updateCombinedDisplay();
+        }
+
+        /**
+         * 특정 섹션에서 선택된 텍스트들을 줄 순서대로 쉼표+공백으로 결합
+         */
+        function getSectionCombinedText(colId) {
+            const colSelections = state.selectedLines.get(colId);
+            if (!colSelections || colSelections.size === 0) return '';
+
+            const sortedIndices = Array.from(colSelections.keys()).sort((a, b) => a - b);
+            return sortedIndices.map(idx => colSelections.get(idx)).join(', ');
+        }
+
+        /**
+         * 템플릿 처리 및 결합 문자열 출력
+         */
+        templateInput.addEventListener('input', () => {
+            updateCombinedDisplay();
+        });
+
+        function updateCombinedDisplay() {
+            const columns = workspace.querySelectorAll('.column');
+            const fileToTextListMap = new Map();
+
+            columns.forEach(col => {
+                const colId = parseInt(col.dataset.id, 10);
+                const selectEl = col.querySelector('.file-select');
+                const fullFileName = selectEl ? selectEl.value : '';
+
+                if (fullFileName) {
+                    const baseName = fullFileName.replace(/\.[^/.]+$/, '');
+                    if (!fileToTextListMap.has(baseName)) {
+                        fileToTextListMap.set(baseName, []);
+                    }
+
+                    const combinedText = getSectionCombinedText(colId);
+                    fileToTextListMap.get(baseName).push(combinedText);
+                }
+            });
+
+            const template = templateInput.value;
+
+            if (template.trim() !== '') {
+                const queues = new Map();
+                fileToTextListMap.forEach((arr, key) => {
+                    queues.set(key, [...arr]);
+                });
+
+                let currentResult = template;
+                const MAX_RECURSION = 10;
+
+                for (let i = 0; i < MAX_RECURSION; i++) {
+                    let replacedAny = false;
+
+                    const nextResult = currentResult.replace(/<([^>]+)>/g, (match, rawName) => {
+                        const queue = queues.get(rawName);
+                        if (queue && queue.length > 0) {
+                            replacedAny = true;
+                            return queue.shift();
+                        }
+                        return match;
+                    });
+
+                    if (!replacedAny || nextResult === currentResult) {
+                        break;
+                    }
+                    currentResult = nextResult;
+                }
+
+                combinedOutput.textContent = cleanCommas(currentResult.replace(/<([^>]+)>/g, ''));
+            } else {
+                const resultTexts = [];
+                columns.forEach(col => {
+                    const colId = parseInt(col.dataset.id, 10);
+                    const sectionText = getSectionCombinedText(colId);
+                    if (sectionText) {
+                        resultTexts.push(sectionText);
+                    }
+                });
+                combinedOutput.textContent = cleanCommas(resultTexts.join(', '));
+            }
+        }
+
+        function cleanCommas(text) {
+            return text
+                .replace(/(?:\s*,)+/g, ',')
+                .replace(/,\s*/g, ', ')
+                .replace(/^[\s,]+|[\s,]+$/g, '')
+                .trim();
+        }
+
+        document.getElementById('btn-clear-lines').addEventListener('click', () => {
+            state.selectedLines.clear();
+            document.querySelectorAll('.column').forEach(col => renderLineView(col));
+            updateCombinedDisplay();
+        });
+
+        document.getElementById('btn-copy-combined').addEventListener('click', () => {
+            const textToCopy = combinedOutput.textContent;
+            if (!textToCopy) return;
+
+            const dummy = document.createElement('textarea');
+            document.body.appendChild(dummy);
+            dummy.value = textToCopy;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            setStatus('선택한 문자열을 클립보드에 복사했습니다.', 'success');
+        });
+
+        /**
+         * 3. 모든 파일 저장 기능
+         */
+        document.getElementById('btn-save-all').addEventListener('click', async () => {
+            if (state.filesMap.size === 0) {
+                setStatus('저장할 파일이 없습니다.', 'warning');
+                return;
+            }
+
+            const modifiedFiles = [];
+            for (const [fileName, currentContent] of state.fileContents.entries()) {
+                const originalContent = state.originalContents.get(fileName);
+                if (currentContent !== originalContent) {
+                    modifiedFiles.push({fileName, content: currentContent});
+                }
+            }
+
+            if (modifiedFiles.length === 0) {
+                setStatus('수정된 파일이 없습니다.', 'info');
+                return;
+            }
+
+            let savedCount = 0;
+
+            if (!state.isFallback && state.dirHandle) {
+                try {
+                    for (const item of modifiedFiles) {
+                        const handle = state.filesMap.get(item.fileName);
+                        if (handle && handle.createWritable) {
+                            const writable = await handle.createWritable();
+                            await writable.write(item.content);
+                            await writable.close();
+
+                            state.originalContents.set(item.fileName, item.content);
+                            savedCount++;
+                        }
+                    }
+                    setStatus(`수정된 ${savedCount}개 파일 저장 완료.`, 'success');
+                } catch (err) {
+                    setStatus('파일 저장 중 오류가 발생했습니다.', 'error');
+                    console.error(err);
+                }
+            } else {
+                for (const item of modifiedFiles) {
+                    const blob = new Blob([item.content], {type: 'text/plain;charset=utf-8'});
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = item.fileName;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+
+                    state.originalContents.set(item.fileName, item.content);
+                    savedCount++;
+                }
+                setStatus(`수정된 ${savedCount}개 파일 다운로드 완료.`, 'success');
+            }
+        });
+    </script>
+</body>
+
+</html>
